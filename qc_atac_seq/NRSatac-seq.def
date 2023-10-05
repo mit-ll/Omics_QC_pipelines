@@ -1,0 +1,105 @@
+Bootstrap: localimage
+From: ../qc_base/qc_base.sif
+
+# **ATAC-seq epigenetics QA/QC Singularity pipeline**
+# 
+# **Authors:**  Derek Ng, Philip Fremont-Smith, & Darrell O. Ricke, Ph.D.  (mailto: Darrell.Ricke@ll.mit.edu)
+#  Copyright:  Copyright (c) 2023 Massachusetts Institute of Technology 
+#  License:    GNU GPL license (http://www.gnu.org/licenses/gpl.html)  
+# 
+# **RAMS request ID 1021178**
+# 
+# **Overview:**
+# ATAC-seq epigenetics QA/QC Singularity pipeline
+# 
+# **Citation:** None
+# 
+# **Disclaimer:**
+# DISTRIBUTION STATEMENT A. Approved for public release. Distribution is unlimited.
+# 
+# This material is based upon work supported by the Defense Advanced Research 
+# Projects Agency under Air Force Contract No. (FA8702- 15-D-0001). Any opinions, 
+# findings and conclusions or recommendations expressed in this material are 
+# those of the author(s) and do not necessarily reflect the views of the 
+# Defense Advanced Research Projects Agency.
+# 
+# © 2023 Massachusetts Institute of Technology
+# 
+# The software/firmware is provided to you on an As-Is basis
+# 
+# Delivered to the U.S. Government with Unlimited Rights, as defined in DFARS
+# Part 252.227-7013 or 7014 (Feb 2014). Notwithstanding any copyright notice,
+# U.S. Government rights in this work are defined by DFARS 252.227-7013 or
+# DFARS 252.227-7014 as detailed above. Use of this work other than as specifically
+# authorized by the U.S. Government may violate any copyrights that exist in this work.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+
+%post
+  echo "The post section has executed."
+ 
+  apt-get update
+  apt-get -y install zlib1g-dev libbz2-dev liblzma-dev pigz libncurses5-dev
+  apt-get -y install libreadline-dev 
+
+  cd /S/
+
+  export PATH="/S/miniconda/bin:$PATH"
+
+  # Install pip
+  curl https://bootstrap.pypa.io/pip/3.6/get-pip.py -o get-pip.py
+  python3 get-pip.py
+
+  # Install Cutadapt
+  python3 -m pip install --upgrade pip 
+  python3 -m pip install cutadapt
+  python3 -m pip install PyYAML
+
+  # Install MACS2
+  python3 -m pip install numpy
+
+  python3 -m pip install deeptools
+  python3 -m pip install tssenrich
+
+  # Install Bedtools
+  conda install -y -c bioconda bedtools
+
+  # Install BWA
+  conda install -y -c bioconda bwa
+
+  # Install Genrich
+  conda install -c bioconda genrich
+
+  # Install Bowtie 2
+  cd /S/
+  wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.5.1/bowtie2-2.5.1-linux-x86_64.zip/download -O bowtie2.zip
+  unzip bowtie2.zip
+
+  cd /S/
+  wget https://github.com/samtools/samtools/releases/download/1.17/samtools-1.17.tar.bz2
+  bzip2 -d samtools-1.17.tar.bz2
+  tar -xvf samtools-1.17.tar
+  cd samtools-1.17
+  ./configure
+  make
+
+  cd /D/
+  wget https://ftp.ncbi.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/latest_assembly_versions/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.fna.gz -O GRCh38.gz
+  gzip -d GRCh38.gz
+  export PATH=/S/bin:/S/miniconda/bin:/S/bowtie2-2.5.1-linux-x86_64:/S/samtools-1.17:/root/.local/bin:$PATH
+  bowtie2-build GRCh38 grch38
+  bwa index -a bwtsw GRCh38
+  mv GRCh38 GRCh38.fa
+
+%environment
+  export PATH=/S/bin:/S/miniconda/bin:/S/bowtie2-2.5.1-linux-x86_64:/S/samtools-1.17:/root/.local/bin:$PATH
+  export PYTHONPATH=$PYTHONPATH:.:/S

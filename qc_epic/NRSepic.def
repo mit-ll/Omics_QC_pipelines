@@ -1,0 +1,110 @@
+Bootstrap: localimage
+From: ../qc_base/qc_base.sif
+
+# **DARPA ECHO EPIC Methylation epigenetics QA/QC pipeline**
+# 
+# **Authors:**  Derek Ng, Philip Fremont-Smith, Darrell O. Ricke, Ph.D.  (mailto: Darrell.Ricke@ll.mit.edu)
+#  Copyright:  Copyright (c) 2023 Massachusetts Institute of Technology 
+#  License:    GNU GPL license (http://www.gnu.org/licenses/gpl.html)  
+# 
+# **RAMS request ID 1021178**
+# 
+# **Overview:**
+# DARPA ECHO EPIC Methylation epigenetics QA/QC pipeline
+# 
+# **Citation:** None
+# 
+# **Disclaimer:**
+# DISTRIBUTION STATEMENT A. Approved for public release. Distribution is unlimited.
+# 
+# This material is based upon work supported by the Defense Advanced Research 
+# Projects Agency under Air Force Contract No. (FA8702- 15-D-0001). Any opinions, 
+# findings and conclusions or recommendations expressed in this material are 
+# those of the author(s) and do not necessarily reflect the views of the 
+# Defense Advanced Research Projects Agency.
+# 
+# © 2023 Massachusetts Institute of Technology
+# 
+# The software/firmware is provided to you on an As-Is basis
+# 
+# Delivered to the U.S. Government with Unlimited Rights, as defined in DFARS
+# Part 252.227-7013 or 7014 (Feb 2014). Notwithstanding any copyright notice,
+# U.S. Government rights in this work are defined by DFARS 252.227-7013 or
+# DFARS 252.227-7014 as detailed above. Use of this work other than as specifically
+# authorized by the U.S. Government may violate any copyrights that exist in this work.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+%post
+  echo "The post section has been executed."
+
+  apt-get -y update
+  apt-get -y install libxml2 libxml2-dev libjpeg-dev
+  apt-get -y install build-essential
+  apt-get -y install gcc-10 g++-10 cpp-10
+  apt-get -y install gfortran-10
+  # apt-get -y install python-igraph
+
+  # Install pip
+  curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+  python3 get-pip.py
+  python3 -m pip install numpy
+  python3 -m pip install scipy
+  python3 -m pip install python-igraph
+
+  curl https://bootstrap.pypa.io/pip/2.7/get-pip.py -o get-pip2.py
+  python2.7 get-pip2.py
+  python2.7 -m pip install Cython
+  python2.7 -m pip install numpy
+  python2.7 -m pip install scipy
+
+  cd /S/
+
+  R --slave -e 'install.packages("XML", repo = "http://cran.us.r-project.org")'
+  R --slave -e 'install.packages("xml2", repo = "http://cran.us.r-project.org")'
+  R --slave -e 'install.packages("usethis", repo = "http://cran.us.r-project.org")'
+  R --slave -e 'install.packages("devtools", repo = "http://cran.us.r-project.org")'
+  R --slave -e 'install.packages("readxl", repo = "http://cran.us.r-project.org")'
+  R --slave -e 'install.packages("latticeExtra", repo = "http://cran.us.r-project.org")'
+  R --slave -e 'install.packages("ggplot2", repo = "http://cran.us.r-project.org")'
+
+  # Install ChAMP
+  R --slave -e 'BiocManager::install("ChAMP")'
+
+  # Install Minfi
+  R --slave -e 'BiocManager::install("minfi")'
+
+  # Install GenomicFeatures
+  R --slave -e 'BiocManager::install("GenomicFeatures")'
+  R --slave -e 'BiocManager::install("bumphunter")'
+  R --slave -e 'BiocManager::install("missMethyl")'
+  R --slave -e 'BiocManager::install("annotate")'
+  R --slave -e 'BiocManager::install("DMRcate")'
+
+
+  # Install MinfiData
+  R --slave -e 'BiocManager::install("minfiData")'
+
+  # Install Ewastools
+  R --slave -e 'install.packages("devtools", repos = "http://cran.us.r-project.org")'
+  R --slave -e 'install.packages("curl", repo = "http://cran.us.r-project.org")'
+  # R --slave -e 'remotes::install_github("hhhh5/ewastools_releases")'
+  R --slave -e 'remotes::install_github("hhhh5/ewastools")'
+  # R --slave -e 'install.packages("remotes", repo = "http://cran.us.r-project.org"); remotes::install_github("hhhh5/ewastools")'
+
+  # Install IlluminaHumanMethylationEPICmanifest
+  R --slave -e 'BiocManager::install("IlluminaHumanMethylationEPICmanifest")'
+
+  # Install methylationArrayAnalysis
+  R --slave -e 'BiocManager::install("methylationArrayAnalysis")'
+
+%environment
+  export PYTHONPATH=$PYTHONPATH:.:/S

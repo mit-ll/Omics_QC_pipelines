@@ -1,0 +1,108 @@
+Bootstrap: localimage
+From: ../qc_base/qc_base.sif
+
+# **miRNA-seq transcriptomics QA/QC Singularity pipeline (BLAST version)**
+# 
+# **Authors:**  Derek Ng, Darrell O. Ricke, Ph.D.  (mailto: Darrell.Ricke@ll.mit.edu)
+#  Copyright:  Copyright (c) 2023 Massachusetts Institute of Technology 
+#  License:    GNU GPL license (http://www.gnu.org/licenses/gpl.html)  
+# 
+# **RAMS request ID 1021178**
+# 
+# **Overview:**
+# miRNA-seq transcriptomics QA/QC Singularity pipeline (BLAST version)
+# 
+# **Citation:** None
+# 
+# **Disclaimer:**
+# DISTRIBUTION STATEMENT A. Approved for public release. Distribution is unlimited.
+# 
+# This material is based upon work supported by the Defense Advanced Research 
+# Projects Agency under Air Force Contract No. (FA8702- 15-D-0001). Any opinions, 
+# findings and conclusions or recommendations expressed in this material are 
+# those of the author(s) and do not necessarily reflect the views of the 
+# Defense Advanced Research Projects Agency.
+# 
+# © 2023 Massachusetts Institute of Technology
+# 
+# The software/firmware is provided to you on an As-Is basis
+# 
+# Delivered to the U.S. Government with Unlimited Rights, as defined in DFARS
+# Part 252.227-7013 or 7014 (Feb 2014). Notwithstanding any copyright notice,
+# U.S. Government rights in this work are defined by DFARS 252.227-7013 or
+# DFARS 252.227-7014 as detailed above. Use of this work other than as specifically
+# authorized by the U.S. Government may violate any copyrights that exist in this work.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+%setup
+  mkdir -p ${SINGULARITY_ROOTFS}/S/BlastParser
+
+%files
+  # Copy local files to the Singularity container [From To]
+  dependencies/human.fa.gz /D/
+  dependencies/mature.fa.gz /D/
+
+  dependencies/miRNA.sh /S/
+  dependencies/fastq2a.rb /S/
+  dependencies/fastq_iterator.rb /S/
+  dependencies/fastq_sequence.rb /S/
+  dependencies/seq_tools.rb /S/
+  dependencies/BlastParser.jar.gz /S/
+
+  BlastParser/BlastHeader.java /S/BlastParser/
+  BlastParser/BlastParser.java /S/BlastParser/
+  BlastParser/BlastParser.mf /S/BlastParser/
+  BlastParser/Feature.java /S/BlastParser/
+  BlastParser/Hit.java /S/BlastParser/
+  BlastParser/Hits.java /S/BlastParser/
+  BlastParser/make_jar /S/BlastParser/
+  BlastParser/SeqTools.java /S/BlastParser/
+
+%post
+  apt-get update
+  apt-get -y install ruby-full
+  
+  # Install pip
+  curl https://bootstrap.pypa.io/pip/3.6/get-pip.py -o get-pip.py
+  python3 get-pip.py
+  python3 -m pip install numpy
+  python3 -m pip install scipy
+
+  export PATH=/S/miniconda/bin/:$PATH
+
+  cd /S/
+  gzip -d BlastParser.jar.gz
+  wget https://ftp.ncbi.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.13.0+-x64-linux.tar.gz
+  gzip -d  ncbi-blast-2.13.0+-x64-linux.tar.gz
+  tar -xvf ncbi-blast-2.13.0+-x64-linux.tar
+
+  # Get OpenRuby
+  git clone https://github.com/doricke/Software-Toolboxes.git
+  cp Software-Toolboxes/OpenRuby/*.rb /S/
+
+  # Setup BlastParser source
+  cp Software-Toolboxes/OpenJava/*.java /S/BlastParser
+
+  cd /D/
+  gzip -d human.fa.gz
+  gzip -d mature.fa.gz
+  export PATH=/S/bin/:/S/miniconda/bin:/S/ncbi-blast-2.13.0+/bin:$PATH
+  /S/ncbi-blast-2.13.0+/bin/makeblastdb -in human.fa -dbtype nucl
+
+%environment
+  export PATH=/S/bin/:/S/miniconda/bin:/S/ncbi-blast-2.13.0+/bin:$PATH
+  export PYTHONPATH=$PYTHONPATH:.:/S
+  export RUBYLIB=/S:.:$RUBYLIB
+  export RUBYPATH=/S:.:$RUBYPATH
+
+%runscript
+  exec /S/miRNA.sh "$@"

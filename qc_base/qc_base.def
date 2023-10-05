@@ -1,0 +1,147 @@
+Bootstrap: docker
+From: ubuntu:latest
+
+# **Base for all QA/QC epigenetics and trascriptomics pipelines**
+# 
+# **Authors:**  Derek Ng, Darrell O. Ricke, Ph.D.  (mailto: Darrell.Ricke@ll.mit.edu)
+#  Copyright:  Copyright (c) 2023 Massachusetts Institute of Technology 
+#  License:    GNU GPL license (http://www.gnu.org/licenses/gpl.html)  
+# 
+# **RAMS request ID 1021178**
+# 
+# **Overview:**
+# Base for all QA/QC epigenetics and trascriptomics pipelines.
+# 
+# **Citation:** None
+# 
+# **Disclaimer:**
+# DISTRIBUTION STATEMENT A. Approved for public release. Distribution is unlimited.
+# 
+# This material is based upon work supported by the Defense Advanced Research 
+# Projects Agency under Air Force Contract No. (FA8702- 15-D-0001). Any opinions, 
+# findings and conclusions or recommendations expressed in this material are 
+# those of the author(s) and do not necessarily reflect the views of the 
+# Defense Advanced Research Projects Agency.
+# 
+# © 2023 Massachusetts Institute of Technology
+# 
+# The software/firmware is provided to you on an As-Is basis
+# 
+# Delivered to the U.S. Government with Unlimited Rights, as defined in DFARS
+# Part 252.227-7013 or 7014 (Feb 2014). Notwithstanding any copyright notice,
+# U.S. Government rights in this work are defined by DFARS 252.227-7013 or
+# DFARS 252.227-7014 as detailed above. Use of this work other than as specifically
+# authorized by the U.S. Government may violate any copyrights that exist in this work.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+
+%setup
+  # The ${SINGULARITY_ROOTFS} is key to make these directories in the correct location.
+  mkdir -p ${SINGULARITY_ROOTFS}/D/
+  mkdir -p ${SINGULARITY_ROOTFS}/S/
+  mkdir -p ${SINGULARITY_ROOTFS}/io/
+
+%files
+  fqSeqLen/fqSeqLen /S/
+  qc_parser/CgCounter.py /S/
+  qc_parser/FastaIterator.py /S/
+  qc_parser/FastaSequence.py /S/
+  qc_parser/frip.py /S/
+  qc_parser/Genes.py /S/
+  qc_parser/InputFile.py /S/
+  qc_parser/Metrics.py /S/
+  qc_parser/MpileupBase.py /S/
+  qc_parser/OutputFile.py /S/
+  qc_parser/Peak.py /S/
+  qc_parser/QcParser.py /S/
+  qc_parser/Ranger.py /S/
+  qc_parser/SamParser.py /S/
+  qc_parser/SamRead.py /S/
+  qc_parser/tree.py /S/
+  qc_parser/TssWindow.py /S/
+  utilities/atac_json.py /S/
+  utilities/epic_json.py /S/
+  utilities/medip_json.py /S/
+  utilities/mint_json.py /S/
+  utilities/mirna_json.py /S/
+  utilities/multiome_json.py /S/
+  utilities/rna_json.py /S/
+  utilities/scatac_json.py /S/
+  utilities/scrna_json.py /S/
+
+
+%post
+  echo "The post section has executed."
+
+  apt -o Acquire::https::No-Cache=True -o Acquire::http::No-Cache=True update
+
+  apt-get update
+  
+  # Set time zone
+  ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get install -y tzdata
+  dpkg-reconfigure --frontend noninteractive tzdata
+  
+  apt-get -y install build-essential coreutils
+  apt-get -y install wget bzip2 git g++ gfortran libreadline6-dev libncurses5-dev xorg-dev libpng-dev libbz2-dev liblzma-dev libpcre3-dev make libcairo2-dev libgtk2.0-dev libcurl4-openssl-dev
+  apt-get -y install locales libcurl4-nss-dev
+  apt-get -y install language-pack-en language-pack-en-base 
+  apt-get -y install git curl unzip bc tabix
+  apt-get -y install libssl-dev libgit2-dev libssh2-1-dev
+  apt-get -y install python3.10 python2.7 gcc zip python2-dev python-dev-is-python3
+  apt-get -y install python-setuptools
+  apt-get -y install default-jre default-jdk
+
+  locale-gen "en_US.UTF-8"
+
+  cd ${SINGULARITY_ROOTFS}/S/
+
+  # Install Conda
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /S/miniconda.sh
+  bash /S/miniconda.sh -b -p /S/miniconda/
+  export PATH="/S/miniconda/bin/:$PATH"
+
+  # Install R
+  wget https://cran.r-project.org/src/base/R-4/R-4.1.3.tar.gz
+  tar zxvf R-4.1.3.tar.gz
+  cd R-4.1.3/
+  ./configure
+  make
+  make install
+  cd ../
+  R --slave -e 'install.packages("BiocManager", repo = "http://cran.us.r-project.org")'
+  R --slave -e 'BiocManager::install("SingleCellExperiment")'
+  R --slave -e 'BiocManager::install("scater")'
+  R --slave -e 'install.packages("Rtsne", repo = "http://cran.us.r-project.org")'
+  R --slave -e 'install.packages("cowplot", repo = "http://cran.us.r-project.org")'
+
+  export PATH=/S/miniconda/bin/:$PATH
+
+  # Install FastQC
+  conda install -y -c bioconda fastqc
+
+  # Install SAMtools
+  conda install -y -c bioconda samtools
+
+  # Install MultiQC
+  git clone https://github.com/ewels/MultiQC.git
+  cd MultiQC/
+  python setup.py install
+
+  cd ${SINGULARITY_ROOTFS}/S
+
+%environment
+  export PATH=/S/jre-8u321/bin/:$PATH
+  export PATH=/S/miniconda/bin/:$PATH
+  export DEBIAN_FRONTEND=noninterative
+
